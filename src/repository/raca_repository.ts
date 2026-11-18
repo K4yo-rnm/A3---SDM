@@ -82,17 +82,30 @@ export class RacaRepository {
     }
 
     async buscarPorNomeEEspecie(nome: string, id_especie: number) {
-        return await prisma.raca.findFirst({
+        const racas = await prisma.raca.findMany({
             where: {
-                nome: {
-                    equals: nome,
-                    mode: "insensitive"
-                },
                 id_especie: id_especie
             }
         });
+
+        const nomeNormalizado = nome.trim().toLocaleLowerCase("pt-BR")
+
+        return racas.find(
+            (raca) => raca.nome.trim().toLocaleLowerCase("pt-BR") === nomeNormalizado
+        ) ?? null
     }
 
+    //Temporario
+    async deletarPorID(id: number) {
+        return await prisma.raca.delete({
+            where: {
+                id_raca: id
+            },
+            include: {
+                especie: true
+            }
+        });
+    }
 }
 
 export const racaRepository = new RacaRepository();

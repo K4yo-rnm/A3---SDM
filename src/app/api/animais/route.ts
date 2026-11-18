@@ -18,3 +18,28 @@ export async function GET() {
         );
     }
 }
+
+export async function POST(request: Request) {
+    try {
+        const dados = await request.json()
+
+        const animal = await animalService.cadastrarAnimal(dados)
+
+        return NextResponse.json({
+            message: "Animal cadastrado com sucesso",
+            animal
+        },
+        { status: 201}
+        )
+        
+    } catch (error) {
+        const mensagem = error instanceof Error
+            ? error.message
+            : "Não foi possivél cadastrar Animal"
+        
+        return NextResponse.json(
+            { erro: mensagem },
+            { status: 400 }
+        );
+    }
+}

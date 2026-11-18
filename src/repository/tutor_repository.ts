@@ -56,7 +56,7 @@ export class TutorRepository{
         });
     }
 
-    async bucarTodods() {
+    async bucarTodos() {
         return await prisma.tutor.findMany({
             include: {
                 enderecos: true,
@@ -66,7 +66,64 @@ export class TutorRepository{
             },
         });
     }
-    
+
+    // Atualizar tutor
+    async atualizarTutor(id: number, dados: {
+        nome_completo?: string;
+        cpf?: string;
+        data_nascimento?: Date | null;
+        email?: string | null;
+        telefone?: string | null;
+        enderecos?: {
+            cep: string;
+            logradouro: string;
+            numero: string;
+            complemento?: string | null;
+            bairro: string;
+            cidade: string;
+            uf: string;
+            id_ibge_municipio?: string | null;
+        }[];
+    }) {
+        return await prisma.tutor.update({
+            where: {
+                id_tutor: id
+            },
+            data: {
+                nome_completo: dados.nome_completo,
+                cpf: dados.cpf,
+                data_nascimento: dados.data_nascimento,
+                email: dados.email,
+                telefone: dados.telefone,
+
+                enderecos: dados.enderecos !== undefined
+                    ? {
+                        deleteMany: {},
+                        create: dados.enderecos
+                    }
+                    : undefined
+            },
+            include: {
+                enderecos: true
+            }
+        });
+    }
+
+    // Inativar tutor (exclusão lógica)
+    async inativarTutor(id: number) {
+        return prisma.tutor.update({
+            where: {
+                id_tutor: id
+            },
+            data: {
+                situacao: "INATIVO"
+            },
+            include: {
+                enderecos: true
+            }
+        });
+    }
+
     //Não Usar
     async deletarPorId(id: number) {
         return await prisma.tutor.delete({

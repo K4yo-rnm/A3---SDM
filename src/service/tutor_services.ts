@@ -162,9 +162,98 @@ export class TutorService {
     }
 
     async consultarTodos() {
-        return await tutorRepository.bucarTodods();
+        return await tutorRepository.bucarTodos();
     }
 
+    // Atualizar tutor
+    async atualizarTutor(id: number, dados: {
+            nome_completo?: string;
+            cpf?: string;
+            data_nascimento?: Date | string | null;
+            email?: string | null;
+            telefone?: string | null;
+            enderecos?: {
+                cep: string;
+                logradouro: string;
+                numero: string;
+                complemento?: string | null;
+                bairro: string;
+                cidade: string;
+                uf: string;
+                id_ibge_municipio?: string | null;
+            }[];
+        }) {
+            if (!Number.isInteger(id) || id <= 0) {
+                throw new Error("ID do tutor inválido.");
+            }
+
+            const tutor = await tutorRepository.bucarPorID(id);
+
+            if (!tutor) {
+                throw new Error("Tutor não encontrado.");
+            }
+
+            if (
+                dados.nome_completo !== undefined &&
+                !dados.nome_completo.trim()
+            ) {
+                throw new Error("O nome do tutor não pode ficar vazio.");
+            }
+
+            if (dados.cpf !== undefined) {
+                const cpf = dados.cpf.replace(/\D/g, "");
+
+                if (!this.validarCPF(cpf)) {
+                    throw new Error("CPF inválido.");
+                }
+
+                const tutorExistente = await tutorRepository.buscaPorCPF(cpf);
+
+                if (tutorExistente && tutorExistente.id_tutor !== id) {
+                    throw new Error("Este CPF já está cadastrado.");
+                }
+
+                dados.cpf = cpf;
+            }
+
+            if (
+                dados.data_nascimento !== undefined &&
+                dados.data_nascimento !== null
+            ) {
+                const data = new Date(dados.data_nascimento);
+
+                if (Number.isNaN(data.getTime())) {
+                    throw new Error("Data de nascimento inválida.");
+                }
+
+                dados.data_nascimento = data;
+            }
+
+            return await tutorRepository.atualizarTutor(id, {
+                ...dados,
+                data_nascimento: dados.data_nascimento as Date | null | undefined
+            });
+        }
+
+    // Inativar tutor (exclusão lógica)
+    async inativarTutor(id: number) {
+        if (!Number.isInteger(id) || id <= 0) {
+            throw new Error("ID do tutor inválido.");
+        }
+
+        const tutor = await tutorRepository.bucarPorID(id);
+
+        if (!tutor) {
+            throw new Error("Tutor não encontrado.");
+        }
+
+        if (tutor.situacao === "INATIVO") {
+            throw new Error("Este tutor já está inativo.");
+        }
+
+        return await tutorRepository.inativarTutor(id);
+    }
+    
     //Não chamar
     async deletarTutor(id: number) {
         if (!Number.isInteger(id) || id <= 0) {

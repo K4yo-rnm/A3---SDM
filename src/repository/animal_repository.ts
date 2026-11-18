@@ -127,6 +127,16 @@ export class AnimalRepository{
         });
     }
 
+    async inativarAnimal(id: string) {
+        return await prisma.animal.update({
+            where: {
+                id_animal: id,
+            },
+            data: {
+                situacao: "INATIVO",
+            },
+        });
+    }
 }
 
 export const animalRepository = new AnimalRepository()

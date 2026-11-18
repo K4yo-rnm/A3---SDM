@@ -113,6 +113,11 @@ export class RacaService {
     async listarTodas() {
         return await racaRepository.listarTodas();
     }
+
+    //Temporario
+    async deletarRaca(id: number) {
+        return await racaRepository.deletarPorID(id)
+    }
 }
 
 export const racaService = new RacaService();

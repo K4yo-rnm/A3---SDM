@@ -49,3 +49,74 @@ export async function GET(
         );
     }
 }
+
+export async function PUT(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const { id } = await params;
+        const dados = await request.json();
+
+        const tutor = await tutorService.atualizarTutor(
+            Number(id),
+            dados
+        );
+
+        return NextResponse.json({
+            mensagem: "Tutor atualizado com sucesso.",
+            dados: tutor
+        }, { status: 200 });
+
+    } catch (error) {
+        const mensagem = error instanceof Error
+            ? error.message
+            : "Erro interno ao atualizar tutor.";
+
+        const status = mensagem.includes("não encontrado")
+            ? 404
+            : mensagem.includes("inválido") ||
+              mensagem.includes("não pode") ||
+              mensagem.includes("já está cadastrado")
+                ? 400
+                : 500;
+
+        return NextResponse.json({
+            mensagem
+        }, { status });
+    }
+}
+
+export async function DELETE(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const { id } = await params;
+
+        const tutor = await tutorService.inativarTutor(
+            Number(id)
+        );
+
+        return NextResponse.json({
+            mensagem: "Tutor inativado com sucesso.",
+            dados: tutor
+        }, { status: 200 });
+
+    } catch (error) {
+        const mensagem = error instanceof Error
+            ? error.message
+            : "Erro interno ao inativar tutor.";
+
+        const status = mensagem.includes("não encontrado")
+            ? 404
+            : mensagem.includes("inválido") ||
+              mensagem.includes("já está inativo")
+                ? 400
+                : 500;
+
+        return NextResponse.json({
+            mensagem
+        }, { status });
+    }
+}

@@ -198,6 +198,23 @@ export class AnimalService {
         return await animalRepository.atualizarAnimal(id, dadosTratados);
     }
 
+    async inativarAnimal(id: string) {
+        if (!id || !id.trim()) {
+            throw new Error("ID do animal inválido.");
+        }
+
+        const animal = await animalRepository.buscarPorID(id);
+
+        if (!animal) {
+            throw new Error("Animal não encontrado.");
+        }
+
+        if (animal.situacao === "INATIVO") {
+            throw new Error("Este animal já está inativo.");
+        }
+
+        return await animalRepository.inativarAnimal(id);
+    }
 }
 
 export const animalService = new AnimalService();
