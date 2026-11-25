@@ -7,18 +7,16 @@ export class EspecieService {
     async cadastrar(dados: {
         nome: string;
         descricao?: string | null;
-        situacao: string;
+        situacao?: string;
     }) {
-        // Validar se o nome foi informado
         if (!dados.nome || !dados.nome.trim()) {
             throw new Error("O nome da espécie é obrigatório.");
         }
 
-        // Preparar dados antes de enviar ao Repository
         const dadosTratados = {
             nome: dados.nome.trim(),
             descricao: dados.descricao?.trim() || null,
-            situacao: dados.situacao
+            situacao: dados.situacao?.trim() || "ATIVO"
         };
 
         return await especieRepository.cadastrar(dadosTratados);

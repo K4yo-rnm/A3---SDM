@@ -9,7 +9,7 @@ export class RacaService {
     async cadastrar(dados: {
         nome: string;
         descricao?: string | null;
-        situacao: string;
+        situacao?: string;
         id_especie: number;
     }) {
         if (!dados.nome || !dados.nome.trim()) {
@@ -33,7 +33,7 @@ export class RacaService {
         const dadosTratados = {
             nome: dados.nome.trim(),
             descricao: dados.descricao?.trim() || null,
-            situacao: dados.situacao,
+            situacao: dados.situacao?.trim() || "ATIVO",
             id_especie: dados.id_especie
         };
 

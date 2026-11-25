@@ -18,6 +18,11 @@ export default function NovoAnimal({ onClose, onCadastrado }: Props) {
     const [racas, setRacas] = useState<Raca[]>([]);
     const [veterinarioId, setVeterinarioId] = useState(0);
     const [especieId, setEspecieId] = useState("");
+    const [mostrarNovaEspecie, setMostrarNovaEspecie] = useState(false);
+    const [mostrarNovaRaca, setMostrarNovaRaca] = useState(false);
+    const [nomeNovaEspecie, setNomeNovaEspecie] = useState("");
+    const [nomeNovaRaca, setNomeNovaRaca] = useState("");
+    const [salvandoCadastro, setSalvandoCadastro] = useState(false);
     const [carregando, setCarregando] = useState(true);
     const [salvando, setSalvando] = useState(false);
     const [erro, setErro] = useState("");
@@ -48,6 +53,78 @@ export default function NovoAnimal({ onClose, onCadastrado }: Props) {
         }
         carregarDados();
     }, []);
+
+    async function cadastrarEspecie() {
+        if (!nomeNovaEspecie.trim()) {
+            setErro("Informe o nome da espécie.");
+            return;
+        }
+
+        setSalvandoCadastro(true);
+        setErro("");
+
+        try {
+            const resposta = await fetch("/api/especie", {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ nome: nomeNovaEspecie.trim() }),
+            });
+
+            const dados = await resposta.json();
+
+            if (!resposta.ok) {
+                throw new Error(dados.erro || "Erro ao cadastrar espécie.");
+            }
+
+            setEspecies((atual) => [...atual, dados.especie]);
+            setEspecieId(String(dados.especie.id_especie));
+            setNomeNovaEspecie("");
+            setMostrarNovaEspecie(false);
+            setAviso("Espécie cadastrada com sucesso.");
+        } catch (e) {
+            setErro(e instanceof Error ? e.message : "Erro ao cadastrar espécie.");
+        } finally {
+            setSalvandoCadastro(false);
+        }
+    }
+
+    async function cadastrarRaca() {
+        if (!nomeNovaRaca.trim() || !especieId) {
+            setErro("Informe o nome da raça e selecione uma espécie.");
+            return;
+        }
+
+        setSalvandoCadastro(true);
+        setErro("");
+
+        try {
+            const resposta = await fetch("/api/raca", {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    nome: nomeNovaRaca.trim(),
+                    id_especie: Number(especieId),
+                }),
+            });
+
+            const dados = await resposta.json();
+
+            if (!resposta.ok) {
+                throw new Error(dados.erro || "Erro ao cadastrar raça.");
+            }
+
+            setRacas((atual) => [...atual, dados.raca]);
+            setNomeNovaRaca("");
+            setMostrarNovaRaca(false);
+            setAviso("Raça cadastrada com sucesso.");
+        } catch (e) {
+            setErro(e instanceof Error ? e.message : "Erro ao cadastrar raça.");
+        } finally {
+            setSalvandoCadastro(false);
+        }
+    }
 
     async function cadastrar(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -133,19 +210,95 @@ export default function NovoAnimal({ onClose, onCadastrado }: Props) {
                         </select>
                     </label>
 
-                    <label className="text-sm text-[#343A40]">Espécie *
-                        <select name="especie" required className={campo} value={especieId} onChange={e => setEspecieId(e.target.value)}>
+                    <label className="text-sm text-[#343A40]">
+                        Espécie *
+                        <select
+                            name="especie"
+                            required
+                            className={campo}
+                            value={especieId}
+                            onChange={e => setEspecieId(e.target.value)}
+                        >
                             <option value="">Selecione a espécie</option>
-                            {especies.map(e => <option key={e.id_especie} value={e.id_especie}>{e.nome}</option>)}
+                            {especies.map(e => (
+                                <option key={e.id_especie} value={e.id_especie}>
+                                    {e.nome}
+                                </option>
+                            ))}
                         </select>
                     </label>
 
-                    <label className="text-sm text-[#343A40]">Raça
+                    <button
+                        type="button"
+                        onClick={() => setMostrarNovaEspecie(!mostrarNovaEspecie)}
+                        className="text-sm text-[#718879] font-medium text-left"
+                    >
+                        + Cadastrar nova espécie
+                    </button>
+
+                    {mostrarNovaEspecie && (
+                        <div className="flex gap-2 items-center">
+                            <input
+                                value={nomeNovaEspecie}
+                                onChange={e => setNomeNovaEspecie(e.target.value)}
+                                placeholder="Nome da nova espécie"
+                                className={campo}
+                            />
+                            <button
+                                type="button"
+                                onClick={cadastrarEspecie}
+                                disabled={salvandoCadastro}
+                                className="rounded-lg bg-[#718879] px-3 py-2 text-sm text-white"
+                            >
+                                Salvar
+                            </button>
+                        </div>
+                    )}
+
+                    <label className="text-sm text-[#343A40]">
+                        Raça
                         <select name="raca" className={campo} defaultValue="">
                             <option value="">Sem raça / Não informada</option>
-                            {racas.filter(r => r.id_especie === Number(especieId)).map(r => <option key={r.id_raca} value={r.id_raca}>{r.nome}</option>)}
+                            {racas
+                                .filter(r => r.id_especie === Number(especieId))
+                                .map(r => (
+                                    <option key={r.id_raca} value={r.id_raca}>
+                                        {r.nome}
+                                    </option>
+                                ))}
                         </select>
                     </label>
+
+                    {especieId && (
+                        <>
+                            <button
+                                type="button"
+                                onClick={() => setMostrarNovaRaca(!mostrarNovaRaca)}
+                                className="text-sm text-[#718879] font-medium text-left"
+                            >
+                                + Cadastrar nova raça
+                            </button>
+
+                            {mostrarNovaRaca && (
+                                <div className="flex gap-2 items-center">
+                                    <input
+                                        value={nomeNovaRaca}
+                                        onChange={e => setNomeNovaRaca(e.target.value)}
+                                        placeholder="Nome da nova raça"
+                                        className={campo}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={cadastrarRaca}
+                                        disabled={salvandoCadastro}
+                                        className="rounded-lg bg-[#718879] px-3 py-2 text-sm text-white"
+                                    >
+                                        Salvar
+                                    </button>
+                                </div>
+                            )}
+                        </>
+                    )}
 
                     <label className="text-sm text-[#343A40]">Data de nascimento
                         <input name="data_nascimento" type="date" className={campo} />
