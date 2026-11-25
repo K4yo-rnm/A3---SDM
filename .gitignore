@@ -40,20 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-/src/generated/prisma
-
-# Prisma
-prisma/
-
-# Banco de dados
-database/
-*.db
-*.sqlite
-*.sqlite3
-
-# Prisma Client gerado
-src/generated/prisma/
-
 # Variáveis de ambiente
 .env
 .env.*

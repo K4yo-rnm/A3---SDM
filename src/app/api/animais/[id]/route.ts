@@ -1,6 +1,7 @@
 
 import { NextResponse } from "next/server";
 import { animalService } from "@/service/animal_services";
+import { obterVeterinarioAutenticado } from "@/lib/auth";
 
 type RouteContext = {
     params: Promise<{
@@ -13,6 +14,14 @@ export async function GET(
     { params }: RouteContext
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const { id } = await params;
 
         if (!id || !id.trim()) {
@@ -48,6 +57,14 @@ export async function DELETE(
     { params }: RouteContext
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const { id } = await params;
 
         if (!id || !id.trim()) {
@@ -88,6 +105,14 @@ export async function PUT(
     { params }: RouteContext 
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const { id } = await params;
         const dados = await request.json()
 

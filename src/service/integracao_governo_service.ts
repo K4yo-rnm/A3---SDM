@@ -69,6 +69,49 @@ export class IntegracaoGovernoService {
         });
     }
 
+    // Registrar integração de cadastro ou atualização de animal
+    async registrarIntegracaoAnimal(dados: {
+        id_animal: string;
+        tipo_operacao: "CADASTRO_ANIMAL" | "ATUALIZACAO_ANIMAL";
+        chave_idempotencia: string;
+    }) {
+        if (!dados.id_animal || !dados.id_animal.trim()) {
+            throw new Error("O animal deve ser informado.");
+        }
+
+        if (!dados.tipo_operacao) {
+            throw new Error("O tipo de operação é obrigatório.");
+        }
+
+        if (!dados.chave_idempotencia || !dados.chave_idempotencia.trim()) {
+            throw new Error("A chave de idempotência é obrigatória.");
+        }
+
+        const animal = await animalRepository.buscarPorID(dados.id_animal);
+
+        if (!animal) {
+            throw new Error("Animal não encontrado.");
+        }
+
+        const integracaoExistente =
+            await integracaoGovernoRepository.buscarPorChaveIdempotencia(
+                dados.chave_idempotencia.trim()
+            );
+
+        if (integracaoExistente) {
+            return integracaoExistente;
+        }
+
+        return await integracaoGovernoRepository.criar({
+            id_animal: dados.id_animal,
+            tipo_operacao: dados.tipo_operacao,
+            chave_idempotencia: dados.chave_idempotencia.trim(),
+            situacao_operacao: "PENDENTE",
+            data_solicitacao: new Date(),
+            quantidade_tentativas: 0
+        });
+    }
+
     // Consultar integração pelo ID
     async consultarPorID(id: number) {
 
@@ -209,6 +252,8 @@ export class IntegracaoGovernoService {
             mensagem.trim()
         );
     }
+
+    
 }
 
 export const integracaoGovernoService = new IntegracaoGovernoService();

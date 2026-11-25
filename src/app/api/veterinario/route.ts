@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { veterinarioService } from "@/service/veterinario_services";
+import { gerarTokenConfirmacao, obterVeterinarioAutenticado } from "@/lib/auth";
 
 // POST - Cadastrar um veterinário
 export async function POST(request: NextRequest) {
@@ -9,17 +10,25 @@ export async function POST(request: NextRequest) {
 
         const veterinario = await veterinarioService.cadastrarVeterinario(dados);
 
+        const tokenConfirmacao = await gerarTokenConfirmacao(
+            veterinario.id_veterinario
+        );
+
+        const linkConfirmacao = 
+            `${request.nextUrl.origin}/api/auth/confirmar?token=${tokenConfirmacao}`;
+
         // Remove o hash da senha antes de retornar a resposta
         const veterinarioSeguro = Object.fromEntries(
             Object.entries(veterinario).filter(
-                ([campo]) => campo !== "hash_sevha"
+                ([campo]) => campo !== "hash_senha"
             )
         );
 
         return NextResponse.json(
             {
-                mensagem: "Veterinário cadastrado com sucesso.",
-                veterinario: veterinarioSeguro
+                mensagem: "Veterinário cadastrado com sucesso. Confirme sua senha pelo link disponibilizado.",
+                veterinario: veterinarioSeguro,
+                linkConfirmacao
             },
             { status: 201 }
         );
@@ -39,13 +48,21 @@ export async function POST(request: NextRequest) {
 // GET - Listar todos os veterinários
 export async function GET() {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const veterinarios = await veterinarioService.listarTodos();
 
         // Remove o hash da senha de todos os registros
         const veterinariosSeguros = veterinarios.map((veterinario) =>
             Object.fromEntries(
                 Object.entries(veterinario).filter(
-                    ([campo]) => campo !== "hash_sevha"
+                    ([campo]) => campo !== "hash_senha"
                 )
             )
         );

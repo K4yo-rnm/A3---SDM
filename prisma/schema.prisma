@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Tutor {
+  id_tutor        Int        @id @default(autoincrement())
+  nome_completo   String
+  cpf             String     @unique
+  data_nascimento DateTime?
+  email           String?
+  telefone        String?
+  data_cadastro   DateTime   @default(now())
+  situacao        String
+  animais         Animal[]
+  enderecos       Endereco[]
+
+  @@map("Tutor")
+}
+
+model Endereco {
+  id_endereco       Int     @id @default(autoincrement())
+  cep               String
+  logradouro        String
+  numero            String
+  complemento       String?
+  bairro            String
+  cidade            String
+  uf                String
+  id_ibge_municipio String?
+  id_tutor          Int
+  tutor             Tutor   @relation(fields: [id_tutor], references: [id_tutor])
+
+  @@map("Endereco")
+}
+
+model Especie {
+  id_especie Int      @id @default(autoincrement())
+  nome       String   @unique
+  descricao  String?
+  situacao   String
+  animais    Animal[]
+  racas      Raca[]
+
+  @@map("Especie")
+}
+
+model Animal {
+  id_animal           String              @id @default(cuid())
+  nome                String
+  data_nascimento     DateTime?
+  idade_estimada      Int?
+  sexo                String?
+  cor                 String?
+  peso_atual          Float?
+  id_tutor            Int
+  id_especie          Int
+  id_raca             Int?
+  situacao            String
+  raca                Raca?               @relation(fields: [id_raca], references: [id_raca])
+  especie             Especie             @relation(fields: [id_especie], references: [id_especie])
+  tutor               Tutor               @relation(fields: [id_tutor], references: [id_tutor])
+  consultas           Consulta[]
+  integracoes_governo IntegracaoGoverno[]
+  vacinas             Vacina[]
+  vinculos_microchip  VinculoMicrochip[]
+
+  @@map("Animal")
+}
+
+model Raca {
+  id_raca    Int      @id @default(autoincrement())
+  id_especie Int
+  nome       String
+  descricao  String?
+  situacao   String
+  animais    Animal[]
+  especie    Especie  @relation(fields: [id_especie], references: [id_especie])
+
+  @@map("Raca")
+}
+
+model Veterinario {
+  id_veterinario     Int                @id @default(autoincrement())
+  nome_completo      String
+  cpf                String
+  num_cmrv           String
+  uf_cmrv            String
+  email              String
+  telefone           String
+  hash_senha         String             @map("hash_sevha")
+  senha_confirmada   Boolean
+  data_confirmacao   DateTime?
+  data_cadastro      DateTime?
+  situacao           String
+  ultimo_acesso      DateTime?
+  consultas          Consulta[]
+  vacinas            Vacina[]
+  vinculos_microchip VinculoMicrochip[]
+}
+
+model Vacina {
+  id_vacina      Int                 @id @default(autoincrement())
+  id_animal      String
+  id_veterinario Int
+  nome_vacina    String
+  tipo_vacina    String
+  antirrabica    Boolean
+  fabricante     String
+  numero_lote    String
+  data_aplicacao DateTime
+  dose_esquema   String
+  via_aplicacao  String
+  proxima_dose   DateTime?
+  validade_lote  DateTime?
+  observacoes    String?
+  situacao       String
+  integracoes    IntegracaoGoverno[]
+  veterinario    Veterinario         @relation(fields: [id_veterinario], references: [id_veterinario])
+  animal         Animal              @relation(fields: [id_animal], references: [id_animal])
+
+  @@map("Vacinas")
+}
+
+model Consulta {
+  id_consulta             Int         @id @default(autoincrement())
+  id_animal               String
+  id_veterinario          Int
+  data_hora               DateTime
+  motivo_atendimento      String
+  anamnese                String?
+  sintomas                String?
+  diagnostico             String?
+  tratamento_prescrito    String?
+  prescricao_medicamentos String?
+  peso_registrado         Float?
+  temperatura             Float?
+  observacoes             String?
+  situacao                String
+  veterinario             Veterinario @relation(fields: [id_veterinario], references: [id_veterinario])
+  animal                  Animal      @relation(fields: [id_animal], references: [id_animal])
+
+  @@map("Consultas")
+}
+
+model VinculoMicrochip {
+  id_vinculo_microchip Int         @id @default(autoincrement())
+  id_animal            String
+  codigo_microchip     String      @unique
+  data_vinculacao      DateTime
+  id_veterinario       Int
+  situacao             String
+  data_desvinculacao   DateTime?
+  motivo_substituicao  String?
+  observacoes          String?
+  veterinario          Veterinario @relation(fields: [id_veterinario], references: [id_veterinario])
+  animal               Animal      @relation(fields: [id_animal], references: [id_animal])
+
+  @@map("Vinculo_Microchip")
+}
+
+model IntegracaoGoverno {
+  id_integracao         Int       @id @default(autoincrement())
+  id_animal             String
+  id_vacina             Int?
+  tipo_operacao         String
+  protocolo_externo     String?
+  chave_idempotencia    String    @unique
+  situacao_operacao     String
+  data_solicitacao      DateTime
+  data_resposta         DateTime?
+  quantidade_tentativas Int
+  mensagem_erro         String?
+
+  vacina                Vacina?   @relation(fields: [id_vacina], references: [id_vacina])
+  animal                Animal    @relation(fields: [id_animal], references: [id_animal])
+
+  @@map("Integracao_Governo")
+}

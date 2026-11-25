@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { vinculoMicrochipService } from "@/service/vinculo_microchip_service";
+import { obterVeterinarioAutenticado } from "@/lib/auth";
 
 // POST - Vincular microchip a um animal
 export async function POST(
@@ -8,6 +9,14 @@ export async function POST(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const { id } = await params;
 
         if (!id || !id.trim()) {
@@ -20,7 +29,6 @@ export async function POST(
         const dados = await request.json();
 
         const codigoMicrochip = dados.codigo_microchip;
-        const idVeterinario = Number(dados.id_veterinario);
 
         if (
             !codigoMicrochip ||
@@ -33,20 +41,10 @@ export async function POST(
             );
         }
 
-        if (
-            !Number.isInteger(idVeterinario) ||
-            idVeterinario <= 0
-        ) {
-            return NextResponse.json(
-                { erro: "ID do veterinário inválido." },
-                { status: 400 }
-            );
-        }
-
         const vinculo = await vinculoMicrochipService.vincularMicrochip({
             id_animal: id,
             codigo_microchip: codigoMicrochip.trim(),
-            id_veterinario: idVeterinario
+            id_veterinario: veterinario.id_veterinario
         });
 
         return NextResponse.json(
@@ -64,7 +62,10 @@ export async function POST(
 
         const status = mensagem.includes("não encontrado")
             ? 404
-            : 400;
+            : mensagem.includes("já foi utilizado") ||
+                mensagem.includes("já possui um microchip ativo")
+                ? 409
+                : 400;
 
         return NextResponse.json(
             { erro: mensagem },
@@ -79,6 +80,14 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const { id } = await params;
 
         if (!id || !id.trim()) {

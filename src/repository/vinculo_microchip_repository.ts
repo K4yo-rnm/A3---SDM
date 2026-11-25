@@ -38,7 +38,13 @@ export class VinculoMicrochipRepository {
             },
             include: {
                 animal: true,
-                veterinario: true
+                veterinario: {
+                    select: {
+                        id_veterinario: true,
+                        num_cmrv: true,
+                        uf_cmrv: true
+                    }
+                }
             },
             orderBy: {
                 data_vinculacao: "desc"
@@ -53,7 +59,13 @@ export class VinculoMicrochipRepository {
                 id_animal: id_animal
             },
             include: {
-                veterinario: true
+                veterinario: {
+                    select: {
+                        id_veterinario: true,
+                        num_cmrv: true,
+                        uf_cmrv: true
+                    }
+                }
             },
             orderBy: {
                 data_vinculacao: "desc"
@@ -122,6 +134,53 @@ export class VinculoMicrochipRepository {
                 id_vinculo_microchip: id
             },
             data: dados
+        });
+    }
+
+    // Substituir microchip em uma única transação
+    async substituir(id: number, dados: {
+        id_animal: string;
+        codigo_microchip: string;
+        id_veterinario: number;
+        motivo_substituicao: string;
+        observacoes?: string | null;
+    }) {
+        return await prisma.$transaction(async (tx) => {
+
+            // Inativar o vínculo anterior
+            await tx.vinculoMicrochip.update({
+                where: {
+                    id_vinculo_microchip: id
+                },
+                data: {
+                    situacao: "INATIVO",
+                    data_desvinculacao: new Date(),
+                    motivo_substituicao: dados.motivo_substituicao
+                }
+            });
+
+            // Criar o novo vínculo
+            return await tx.vinculoMicrochip.create({
+                data: {
+                    codigo_microchip: dados.codigo_microchip,
+                    data_vinculacao: new Date(),
+                    situacao: "ATIVO",
+                    observacoes: dados.observacoes,
+                    motivo_substituicao: dados.motivo_substituicao,
+
+                    animal: {
+                        connect: {
+                            id_animal: dados.id_animal
+                        }
+                    },
+
+                    veterinario: {
+                        connect: {
+                            id_veterinario: dados.id_veterinario
+                        }
+                    }
+                }
+            });
         });
     }
 

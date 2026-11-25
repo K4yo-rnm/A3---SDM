@@ -1,10 +1,19 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { integracaoGovernoService } from "@/service/integracao_governo_service";
+import { obterVeterinarioAutenticado } from "@/lib/auth";
 
 // GET - Listar todas as integrações governamentais
 export async function GET() {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { erro: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const integracoes = await integracaoGovernoService.listarTodas();
 
         return NextResponse.json(
@@ -27,6 +36,14 @@ export async function GET() {
 // POST - Registrar uma operação de integração
 export async function POST(request: NextRequest) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { erro: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const dados = await request.json();
 
         if (

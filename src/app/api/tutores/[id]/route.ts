@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { tutorService } from "@/service/tutor_services";
+import { obterVeterinarioAutenticado } from "@/lib/auth";
 
 type ContextRota = {
     params: Promise<{ id: string }>;
@@ -11,6 +12,14 @@ export async function GET(
     { params }: ContextRota
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         //recuperar ID da rota
         const { id } = await params;
 
@@ -55,6 +64,14 @@ export async function PUT(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const { id } = await params;
         const dados = await request.json();
 
@@ -92,6 +109,14 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const { id } = await params;
 
         const tutor = await tutorService.inativarTutor(

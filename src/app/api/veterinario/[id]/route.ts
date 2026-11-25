@@ -1,12 +1,14 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { veterinarioService } from "@/service/veterinario_services";
+import { obterVeterinarioAutenticado } from "@/lib/auth";
+
 
 // Remove o hash da senha antes de retornar os dados
 function removerHash(veterinario: object) {
     return Object.fromEntries(
         Object.entries(veterinario).filter(
-            ([campo]) => campo !== "hash_sevha"
+            ([campo]) => campo !== "hash_senha"
         )
     );
 }
@@ -17,6 +19,14 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const { id } = await params;
         const idNumerico = Number(id);
 
@@ -27,10 +37,10 @@ export async function GET(
             );
         }
 
-        const veterinario = await veterinarioService.consultarPorID(idNumerico);
+        const veterinarios = await veterinarioService.consultarPorID(idNumerico);
 
         return NextResponse.json(
-            removerHash(veterinario),
+            removerHash(veterinarios),
             { status: 200 }
         );
 
@@ -52,6 +62,14 @@ export async function PUT(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const { id } = await params;
         const idNumerico = Number(id);
 
@@ -69,7 +87,7 @@ export async function PUT(
         delete dados.senha_confirmada;
         delete dados.data_confirmacao;
 
-        const veterinario = await veterinarioService.atualizarVeterinario(
+        const veterinarios = await veterinarioService.atualizarVeterinario(
             idNumerico,
             dados
         );
@@ -77,7 +95,7 @@ export async function PUT(
         return NextResponse.json(
             {
                 mensagem: "Veterinário atualizado com sucesso.",
-                veterinario: removerHash(veterinario)
+                veterinarios: removerHash(veterinarios)
             },
             { status: 200 }
         );
@@ -100,6 +118,14 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const { id } = await params;
         const idNumerico = Number(id);
 

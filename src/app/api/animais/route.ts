@@ -1,9 +1,18 @@
 
 import { NextResponse } from "next/server";
 import { animalService } from "@/service/animal_services";
+import { obterVeterinarioAutenticado } from "@/lib/auth";
 
 export async function GET() {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const animais = await animalService.listarTodos();
 
         return NextResponse.json(animais, {
@@ -21,6 +30,14 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const dados = await request.json()
 
         const animal = await animalService.cadastrarAnimal(dados)

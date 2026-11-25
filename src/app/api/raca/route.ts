@@ -1,6 +1,7 @@
 
 import { NextResponse } from "next/server";
 import { racaService } from "@/service/raca_services";
+import { obterVeterinarioAutenticado } from "@/lib/auth";
 
 // GET - Listar todas as raças
 export async function GET() {
@@ -22,6 +23,14 @@ export async function GET() {
 // POST - Cadastrar uma nova raça
 export async function POST(request: Request) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+        
+                if (!veterinario) {
+                    return NextResponse.json(
+                        { erro: "Acesso não autorizado. Faça login." },
+                        { status: 401 }
+                    );
+                }
         const dados = await request.json();
 
         const raca = await racaService.cadastrar(dados);

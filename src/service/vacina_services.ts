@@ -4,6 +4,7 @@ import { animalRepository } from "@/repository/animal_repository";
 import { veterinarioRepository } from "@/repository/veterinario_repository";
 import { prisma } from "@/lib/prisma";
 import { integracaoGovernoRepository } from "@/repository/integracao_governo_repository";
+import { enviarVacinacaoAntirrabica } from "@/service/governo_service";
 
 export class VacinaService {
 
@@ -33,6 +34,147 @@ export class VacinaService {
         if (!veterinario.senha_confirmada) {
             throw new Error("O veterinário ainda não confirmou sua senha.");
         }
+    }
+
+    // Processar comunicação com a API governamental
+    private async processarIntegracaoAntirrabica(
+        id_integracao: number,
+        id_vacina: number
+    ) {
+        try {
+            // Buscar vacinação, animal e veterinário
+            const vacina = await prisma.vacina.findUnique({
+                where: {
+                    id_vacina
+                },
+                include: {
+                    animal: true,
+                    veterinario: true
+                }
+            });
+
+            if (!vacina) {
+                throw new Error("Vacinação não encontrada.");
+            }
+
+            // Buscar somente o microchip ativo do animal
+            const microchip = await prisma.vinculoMicrochip.findFirst({
+                where: {
+                    id_animal: vacina.id_animal,
+                    situacao: "ATIVO"
+                },
+                orderBy: {
+                    data_vinculacao: "desc"
+                }
+            });
+
+            if (!microchip) {
+                throw new Error(
+                    "Animal não possui microchip ativo para integração."
+                );
+            }
+
+            // Enviar os dados à API governamental
+            const resposta = await enviarVacinacaoAntirrabica({
+                chave_idempotencia:
+                    `VACINA-ANTIRRABICA-${vacina.id_vacina}`,
+
+                microchip: microchip.codigo_microchip,
+
+                identificacao_animal: vacina.animal.nome,
+
+                data_vacinacao:
+                    vacina.data_aplicacao.toISOString().slice(0, 10),
+
+                identificacao_vacina: vacina.nome_vacina,
+
+                fabricante: vacina.fabricante,
+
+                lote: vacina.numero_lote,
+
+                identificacao_veterinario:
+                    `${vacina.veterinario.num_cmrv}/${vacina.veterinario.uf_cmrv}`
+            });
+
+            // Registrar a confirmação e o protocolo recebido
+            return await integracaoGovernoRepository.marcarComoConfirmada(
+                id_integracao,
+                resposta.protocolo
+            );
+
+        } catch (error) {
+
+            const mensagem = error instanceof Error
+                ? error.message
+                : "Erro desconhecido na integração governamental.";
+
+            // Registrar tentativa e manter operação pendente
+            await integracaoGovernoRepository.registrarTentativa(
+                id_integracao,
+                mensagem
+            );
+
+            return await integracaoGovernoRepository.buscarPorID(
+                id_integracao
+            );
+        }
+    }
+
+    // Reenviar uma integração governamental pendente
+    async reenviarIntegracao(id_integracao: number) {
+        const integracao =
+            await integracaoGovernoRepository.buscarPorID(
+                id_integracao
+            );
+
+        if (!integracao) {
+            throw new Error("Integração governamental não encontrada.");
+        }
+
+        if (integracao.id_vacina === null) {
+            throw new Error("Esta operação não está vinculada a uma vacinação.");
+        }
+
+        if (integracao.situacao_operacao === "CONFIRMADA") {
+            throw new Error("Esta integração já foi confirmada.");
+        }
+
+        if (integracao.situacao_operacao !== "PENDENTE") {
+            throw new Error(
+                "Somente integrações pendentes podem ser reenviadas."
+            );
+        }
+
+        return await this.processarIntegracaoAntirrabica(
+            integracao.id_integracao,
+            integracao.id_vacina
+        );
+    }
+
+    // Processar automaticamente todas as integrações pendentes
+    async processarIntegracoesPendentes() {
+        const integracoes =
+            await integracaoGovernoRepository.buscarPendentes();
+
+        const resultados = [];
+
+        for (const integracao of integracoes) {
+            if (integracao.id_vacina === null) {
+                continue;
+            }
+            const resultado =
+                await this.processarIntegracaoAntirrabica(
+                    integracao.id_integracao,
+                    integracao.id_vacina
+                );
+
+            resultados.push(resultado);
+        }
+
+        return {
+            total_processado: resultados.length,
+            integracoes: resultados
+        };
     }
 
     // Cadastrar aplicação de vacina
@@ -126,7 +268,7 @@ export class VacinaService {
         }
 
         // Executar cadastro e integração na mesma transação
-        return await prisma.$transaction(async (tx) => {
+        const resultado = await prisma.$transaction(async (tx) => {
 
             const vacina = await vacinaRepository.criar(
                 {
@@ -180,6 +322,21 @@ export class VacinaService {
                 integracao
             };
         });
+        // Enviar vacinação antirrábica após salvar os dados localmente
+        if (resultado.integracao) {
+            const integracaoAtualizada =
+                await this.processarIntegracaoAntirrabica(
+                    resultado.integracao.id_integracao,
+                    resultado.vacina.id_vacina
+                );
+
+            return {
+                vacina: resultado.vacina,
+                integracao: integracaoAtualizada
+            };
+        }
+        // Retornar normalmente quando não houver integração
+        return resultado;
     }
 
     // Consultar vacina por ID

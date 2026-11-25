@@ -1,6 +1,8 @@
 
 import { NextResponse } from "next/server";
 import { vinculoMicrochipService } from "@/service/vinculo_microchip_service";
+import { obterVeterinarioAutenticado } from "@/lib/auth";
+
 
 // GET - Consultar histórico de microchips de um animal
 export async function GET(
@@ -8,6 +10,14 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const { id } = await params;
 
         if (!id || !id.trim()) {

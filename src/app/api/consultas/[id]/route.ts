@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { consultaService } from "@/service/consulta_services";
+import { obterVeterinarioAutenticado } from "@/lib/auth";
 
 // GET - Consultar consulta por ID
 export async function GET(
@@ -8,6 +9,14 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const { id } = await params;
         const idConsulta = Number(id);
 
@@ -48,6 +57,14 @@ export async function PUT(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const { id } = await params;
         const idConsulta = Number(id);
 
@@ -113,6 +130,14 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const { id } = await params;
         const idConsulta = Number(id);
 

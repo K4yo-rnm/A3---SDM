@@ -1,5 +1,6 @@
 
 import { veterinarioRepository } from "@/repository/veterinario_repository";
+import bcrypt from "bcryptjs";
 
 export class VeterinarioService {
 
@@ -44,16 +45,17 @@ export class VeterinarioService {
 
     // Cadastrar veterinário
     async cadastrarVeterinario(dados: {
+        nome_completo: string;
         cpf: string;
         num_cmrv: string;
         uf_cmrv: string;
         email: string;
         telefone: string;
-        hash_sevha: string;
+        senha: string;
     }) {
 
         if (!dados.cpf || !dados.num_cmrv || !dados.uf_cmrv ||
-            !dados.email || !dados.telefone || !dados.hash_sevha) {
+            !dados.email || !dados.telefone || !dados.senha || !dados.nome_completo)  {
             throw new Error("Todos os campos obrigatórios devem ser preenchidos.");
         }
 
@@ -87,11 +89,16 @@ export class VeterinarioService {
             throw new Error("Já existe um veterinário cadastrado com este e-mail.");
         }
 
+        const hash_senha = await bcrypt.hash(dados.senha, 12);
+
         return await veterinarioRepository.criar({
-            ...dados,
+            nome_completo: dados.nome_completo.trim(),
             cpf,
-            email,
+            num_cmrv: dados.num_cmrv,
             uf_cmrv: uf,
+            email,
+            telefone: dados.telefone,
+            hash_senha,
             senha_confirmada: false,
             situacao: "ATIVO"
         });
@@ -120,6 +127,7 @@ export class VeterinarioService {
 
     // Atualizar veterinário
     async atualizarVeterinario(id: number, dados: {
+        nome_completo?: string;
         cpf?: string;
         num_cmrv?: string;
         uf_cmrv?: string;

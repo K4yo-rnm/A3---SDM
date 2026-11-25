@@ -11,8 +11,11 @@
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.10.1",
     "@prisma/client": "^7.10.1",
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
+    "jose": "^6.2.18",
     "next": "16.4.5",
+    "prisma": "^7.10.1",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
@@ -24,7 +27,6 @@
     "dotenv": "^18.0.9",
     "eslint": "^9",
     "eslint-config-next": "16.4.5",
-    "prisma": "^7.10.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

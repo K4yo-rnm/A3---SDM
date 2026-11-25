@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { vinculoMicrochipService } from "@/service/vinculo_microchip_service";
+import { obterVeterinarioAutenticado } from "@/lib/auth";
 
 // GET - Consultar vínculo pelo ID
 export async function GET(
@@ -8,6 +9,14 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const { id } = await params;
         const idVinculo = Number(id);
 
@@ -42,6 +51,14 @@ export async function PUT(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const { id } = await params;
         const idVinculo = Number(id);
 
@@ -87,7 +104,7 @@ export async function PUT(
             idVinculo,
             {
                 codigo_microchip: dados.codigo_microchip.trim(),
-                id_veterinario: idVeterinario,
+                id_veterinario: veterinario.id_veterinario,
                 motivo_substituicao: dados.motivo_substituicao.trim(),
                 observacoes: dados.observacoes ?? null
             }
@@ -121,6 +138,14 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const { id } = await params;
         const idVinculo = Number(id);
 

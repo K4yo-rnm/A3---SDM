@@ -48,16 +48,20 @@ export class AnimalRepository{
     }
 
     async buscarPorID(id: string) {
-        return await prisma.animal.findUnique({
-            where: {
-                id_animal: id
-            },
-            include: {
-                tutor: true,
-                especie: true,
-                raca: true
-            }
-        });
+    const animal = await prisma.animal.findUnique({
+        where: {
+            id_animal: id
+        },
+        include: {
+            tutor: true,
+            especie: true,
+            raca: true,
+            vinculos_microchip: true,
+            integracoes_governo: true
+        }
+    });
+
+        return animal;
     }
 
     async listarTodos() {
@@ -65,7 +69,16 @@ export class AnimalRepository{
             include: {
                 tutor: true,
                 especie: true,
-                raca: true
+                raca: true,
+                vinculos_microchip: {
+                    where: {
+                        situacao: "ATIVO"
+                    },
+                    select: {
+                        codigo_microchip: true,
+                        situacao: true
+                    }
+                }
             },
             orderBy: {
                 nome: "asc"

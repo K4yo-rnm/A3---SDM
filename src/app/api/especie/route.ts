@@ -1,6 +1,7 @@
 
 import { NextResponse } from "next/server";
 import { especieService } from "@/service/especie_services";
+import { obterVeterinarioAutenticado } from "@/lib/auth";
 
 // GET - Listar todas as espécies
 export async function GET() {
@@ -22,6 +23,14 @@ export async function GET() {
 // POST - Cadastrar uma nova espécie
 export async function POST(request: Request) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { erro: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const dados = await request.json();
 
         const especie = await especieService.cadastrar(dados);

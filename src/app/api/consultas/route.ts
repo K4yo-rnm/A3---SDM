@@ -1,10 +1,19 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { consultaService } from "@/service/consulta_services";
+import { obterVeterinarioAutenticado } from "@/lib/auth";
 
 // POST - Registrar uma consulta
 export async function POST(request: NextRequest) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const dados = await request.json();
 
         if (!dados.data_hora) {
@@ -53,6 +62,14 @@ export async function POST(request: NextRequest) {
 // GET - Listar todas as consultas
 export async function GET() {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const consultas = await consultaService.listarTodas();
 
         return NextResponse.json(

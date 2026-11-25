@@ -2,6 +2,8 @@
 import { vinculoMicrochipRepository } from "@/repository/vinculo_microchip_repository";
 import { animalRepository } from "@/repository/animal_repository";
 import { veterinarioRepository } from "@/repository/veterinario_repository";
+import { integracaoGovernoService } from "@/service/integracao_governo_service";
+import { cadastrarAnimalGoverno } from "@/service/governo_service";
 
 export class VinculoMicrochipService {
 
@@ -31,16 +33,16 @@ export class VinculoMicrochipService {
         if (!veterinario.senha_confirmada) {
             throw new Error("O veterinário ainda não confirmou sua senha.");
         }
+        return animal;
     }
 
-    // Vincular microchip a um animal
+    // Vincular microchip a um animal e sincronizar com o governo
     async vincularMicrochip(dados: {
         id_animal: string;
         codigo_microchip: string;
         id_veterinario: number;
         observacoes?: string | null;
     }) {
-
         if (!dados.id_animal || !dados.id_animal.trim()) {
             throw new Error("O animal deve ser informado.");
         }
@@ -55,33 +57,108 @@ export class VinculoMicrochipService {
             throw new Error("Veterinário inválido.");
         }
 
-        await this.validarResponsaveis(
+        const animal = await this.validarResponsaveis(
             dados.id_animal,
             dados.id_veterinario
         );
 
-        const microchipExistente = await vinculoMicrochipRepository.buscarPorCodigo(codigo);
+        // Verificar se o código já existe
+        const microchipExistente =
+            await vinculoMicrochipRepository.buscarPorCodigo(codigo);
+
+        let vinculo;
 
         if (microchipExistente) {
-            throw new Error("Este código de microchip já foi utilizado.");
+            // Permitir nova sincronização somente se já pertence
+            // ao mesmo animal e continua ativo.
+            if (
+                microchipExistente.id_animal !== dados.id_animal ||
+                microchipExistente.situacao !== "ATIVO"
+            ) {
+                throw new Error("Este código de microchip já foi utilizado.");
+            }
+
+            // Reaproveitar o vínculo existente
+            vinculo = microchipExistente;
+
+        } else {
+            // Verificar se o animal já possui outro microchip ativo
+            const vinculoAtivo =
+                await vinculoMicrochipRepository.buscarAtivoPorAnimal(
+                    dados.id_animal
+                );
+
+            if (vinculoAtivo) {
+                throw new Error(
+                    "Este animal já possui um microchip ativo. Utilize a operação de substituição."
+                );
+            }
+
+            // Criar o vínculo local
+            vinculo = await vinculoMicrochipRepository.criar({
+                id_animal: dados.id_animal,
+                codigo_microchip: codigo,
+                id_veterinario: dados.id_veterinario,
+                observacoes: dados.observacoes,
+                situacao: "ATIVO",
+                data_vinculacao: new Date()
+            });
         }
 
-        const vinculoAtivo = await vinculoMicrochipRepository.buscarAtivoPorAnimal(
-            dados.id_animal
-        );
+        // Recuperar ou criar a integração usando a mesma chave idempotente
+        const integracao =
+            await integracaoGovernoService.registrarIntegracaoAnimal({
+                id_animal: dados.id_animal,
+                tipo_operacao: "CADASTRO_ANIMAL",
+                chave_idempotencia:
+                    `CADASTRO_ANIMAL_${dados.id_animal}_${codigo}`
+            });
 
-        if (vinculoAtivo) {
-            throw new Error("Este animal já possui um microchip ativo. Utilize a operação de substituição.");
+        if (integracao.situacao_operacao !== "CONFIRMADA") {
+            try {
+                const resposta = await cadastrarAnimalGoverno({
+                    microchip: codigo,
+                    nome: animal.nome,
+                    data_nascimento: animal.data_nascimento
+                        ? new Date(animal.data_nascimento)
+                            .toISOString()
+                            .split("T")[0]
+                        : null,
+                    idade_estimada: animal.idade_estimada,
+                    sexo: animal.sexo === "MACHO"
+                        ? "M"
+                        : animal.sexo === "FEMEA"
+                            ? "F"
+                            : null,
+                    cor: animal.cor,
+                    peso_atual: animal.peso_atual,
+                    especie: animal.especie.nome,
+                    raca: animal.raca?.nome ?? null
+                });
+
+                await integracaoGovernoService.confirmarIntegracao(
+                    integracao.id_integracao,
+                    resposta.protocolo
+                );
+
+            } catch (error) {
+                const mensagem = error instanceof Error
+                    ? error.message
+                    : "Erro desconhecido na comunicação governamental.";
+
+                await integracaoGovernoService.registrarTentativa(
+                    integracao.id_integracao,
+                    mensagem
+                );
+
+                console.error(
+                    "Falha ao sincronizar animal com o governo:",
+                    mensagem
+                );
+            }
         }
 
-        return await vinculoMicrochipRepository.criar({
-            id_animal: dados.id_animal,
-            codigo_microchip: codigo,
-            id_veterinario: dados.id_veterinario,
-            observacoes: dados.observacoes,
-            situacao: "ATIVO",
-            data_vinculacao: new Date()
-        });
+        return vinculo;
     }
 
     // Consultar vínculo pelo ID
@@ -184,27 +261,21 @@ export class VinculoMicrochipService {
             dados.id_veterinario
         );
 
-        const microchipExistente = await vinculoMicrochipRepository.buscarPorCodigo(codigo);
+        const microchipExistente =
+            await vinculoMicrochipRepository.buscarPorCodigo(codigo);
 
         if (microchipExistente) {
             throw new Error("Este código de microchip já foi utilizado.");
         }
 
-        // Desvincular o microchip anterior
-        await vinculoMicrochipRepository.desvincular(
-            id,
-            dados.motivo_substituicao.trim()
-        );
-
-        // Criar o novo vínculo, preservando o anterior
-        return await vinculoMicrochipRepository.criar({
+        // Substituir em uma única transação,
+        // preservando o vínculo anterior no histórico.
+        return await vinculoMicrochipRepository.substituir(id, {
             id_animal: vinculoAnterior.id_animal,
             codigo_microchip: codigo,
             id_veterinario: dados.id_veterinario,
-            observacoes: dados.observacoes,
             motivo_substituicao: dados.motivo_substituicao.trim(),
-            situacao: "ATIVO",
-            data_vinculacao: new Date()
+            observacoes: dados.observacoes
         });
     }
 

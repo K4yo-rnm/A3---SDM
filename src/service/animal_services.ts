@@ -1,10 +1,20 @@
 'use service'
 
+import { createHash } from "node:crypto";
 
 import { animalRepository } from "@/repository/animal_repository";
 import { tutorRepository } from "@/repository/tutor_repository";
 import { especieRepository } from "@/repository/especie_repository";
 import { racaRepository } from "@/repository/raca_repository";
+import { vinculoMicrochipRepository } from "@/repository/vinculo_microchip_repository";
+
+import {
+    atualizarAnimalGoverno
+} from "@/service/governo_service";
+
+import {
+    integracaoGovernoService
+} from "@/service/integracao_governo_service";
 
 export class AnimalService {
 
@@ -195,7 +205,101 @@ export class AnimalService {
             nome: dados.nome?.trim()
         };
 
-        return await animalRepository.atualizarAnimal(id, dadosTratados);
+        // 1. Atualiza primeiro o banco local.
+        const animalAtualizado = await animalRepository.atualizarAnimal(
+            id,
+            dadosTratados
+        );
+
+        // 2. Busca os dados completos do animal atualizado.
+        try {
+            const animalCompleto = await animalRepository.buscarPorID(id);
+
+            if (!animalCompleto) {
+                throw new Error("Animal não encontrado após a atualização.");
+            }
+
+            // 3. Verifica se existe microchip ativo.
+            const vinculo = await vinculoMicrochipRepository.buscarAtivoPorAnimal(id);
+
+            // Sem microchip ativo, não há cadastro para sincronizar.
+            if (!vinculo) {
+                return animalAtualizado;
+            }
+
+            const dadosGoverno = {
+                nome: animalCompleto.nome,
+                data_nascimento: animalCompleto.data_nascimento
+                    ? new Date(animalCompleto.data_nascimento).toISOString().slice(0, 10)
+                    : null,
+                idade_estimada: animalCompleto.idade_estimada,
+                sexo: animalCompleto.sexo === "MACHO"
+                    ? "M"
+                    : animalCompleto.sexo === "FEMEA"
+                        ? "F"
+                        : null,
+                cor: animalCompleto.cor,
+                peso_atual: animalCompleto.peso_atual !== null
+                    ? Number(animalCompleto.peso_atual)
+                    : null,
+                especie: animalCompleto.especie.nome,
+                raca: animalCompleto.raca?.nome ?? null
+            };
+
+            // 4. Gera uma chave estável para os mesmos dados.
+            const hashDados = createHash("sha256")
+                .update(JSON.stringify(dadosGoverno))
+                .digest("hex");
+
+            const chaveIdempotencia =
+                `ATUALIZACAO_ANIMAL_${id}_${vinculo.codigo_microchip}_${hashDados}`;
+
+            // 5. Registra ou recupera a operação de integração.
+            const integracao = await integracaoGovernoService.registrarIntegracaoAnimal({
+                id_animal: id,
+                tipo_operacao: "ATUALIZACAO_ANIMAL",
+                chave_idempotencia: chaveIdempotencia
+            });
+
+            // Não envia novamente uma operação já confirmada.
+            if (integracao.situacao_operacao !== "CONFIRMADA") {
+                try {
+                    // 6. Envia a atualização para a API governamental.
+                    const resposta = await atualizarAnimalGoverno(
+                        vinculo.codigo_microchip,
+                        dadosGoverno
+                    );
+
+                    // 7. Confirma a integração.
+                    await integracaoGovernoService.confirmarIntegracao(
+                        integracao.id_integracao,
+                        resposta.protocolo
+                    );
+                } catch (erro) {
+                    const mensagem = erro instanceof Error
+                        ? erro.message
+                        : "Erro desconhecido na integração governamental.";
+
+                    await integracaoGovernoService.registrarTentativa(
+                        integracao.id_integracao,
+                        mensagem
+                    );
+
+                    console.error(
+                        "Falha ao atualizar animal na API governamental:",
+                        mensagem
+                    );
+                }
+            }
+        } catch (erro) {
+            console.error(
+                "Erro ao processar integração do animal:",
+                erro
+            );
+        }
+
+        // 8. Mantém o resultado da atualização local.
+        return animalAtualizado;
     }
 
     async inativarAnimal(id: string) {

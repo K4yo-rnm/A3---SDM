@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { racaService } from "@/service/raca_services";
+import { obterVeterinarioAutenticado } from "@/lib/auth";
 
 type RouteContext = {
     params: Promise<{
@@ -50,6 +51,14 @@ export async function DELETE(
     { params }: RouteContext
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+        
+                if (!veterinario) {
+                    return NextResponse.json(
+                        { erro: "Acesso não autorizado. Faça login." },
+                        { status: 401 }
+                    );
+                }
         const { id } = await params;
         if (!id || !id.trim()) {
             return NextResponse.json(
@@ -90,6 +99,14 @@ export async function PUT(
     { params }: RouteContext 
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+        
+                if (!veterinario) {
+                    return NextResponse.json(
+                        { erro: "Acesso não autorizado. Faça login." },
+                        { status: 401 }
+                    );
+                }
         const { id } = await params;
         const dados = await request.json()
 

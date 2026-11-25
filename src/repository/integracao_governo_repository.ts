@@ -91,19 +91,20 @@ export class IntegracaoGovernoRepository {
     }
 
     // Registrar nova operação de integração
-    async criar(dados: {
-        id_animal: string;
-        id_vacina: number;
-        tipo_operacao: string;
-        protocolo_externo?: string | null;
-        chave_idempotencia: string;
-        situacao_operacao?: string;
-        data_solicitacao?: Date;
-        data_resposta?: Date | null;
-        quantidade_tentativas?: number;
-        mensagem_erro?: string | null;
-    },
-    client: Pick<PrismaClient, "integracaoGoverno"> = prisma
+    async criar(
+        dados: {
+            id_animal: string;
+            id_vacina?: number | null;
+            tipo_operacao: string;
+            protocolo_externo?: string | null;
+            chave_idempotencia: string;
+            situacao_operacao?: string;
+            data_solicitacao?: Date;
+            data_resposta?: Date | null;
+            quantidade_tentativas?: number;
+            mensagem_erro?: string | null;
+        },
+        client: Pick<PrismaClient, "integracaoGoverno"> = prisma
     ) {
         return await client.integracaoGoverno.create({
             data: {
@@ -122,11 +123,13 @@ export class IntegracaoGovernoRepository {
                     }
                 },
 
-                vacina: {
-                    connect: {
-                        id_vacina: dados.id_vacina
+                vacina: dados.id_vacina
+                    ? {
+                        connect: {
+                            id_vacina: dados.id_vacina
+                        }
                     }
-                }
+                    : undefined
             }
         });
     }
@@ -188,6 +191,9 @@ export class IntegracaoGovernoRepository {
                 situacao_operacao: "CONFIRMADA",
                 protocolo_externo: protocolo,
                 data_resposta: new Date(),
+                quantidade_tentativas: {
+                    increment: 1
+                },
                 mensagem_erro: null
             }
         });

@@ -1,10 +1,19 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { integracaoGovernoService } from "@/service/integracao_governo_service";
+import { obterVeterinarioAutenticado } from "@/lib/auth";
 
 // GET - Consultar integração pela chave de idempotência
 export async function GET(request: NextRequest) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+        
+                if (!veterinario) {
+                    return NextResponse.json(
+                        { erro: "Acesso não autorizado. Faça login." },
+                        { status: 401 }
+                    );
+                }
         const chave = request.nextUrl.searchParams.get("chave");
 
         if (!chave || !chave.trim()) {

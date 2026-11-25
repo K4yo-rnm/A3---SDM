@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { integracaoGovernoService } from "@/service/integracao_governo_service";
+import { obterVeterinarioAutenticado } from "@/lib/auth";
 
 // GET - Consultar integrações de uma vacina
 export async function GET(
@@ -8,6 +9,14 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+        
+                if (!veterinario) {
+                    return NextResponse.json(
+                        { erro: "Acesso não autorizado. Faça login." },
+                        { status: 401 }
+                    );
+                }
         const { id } = await params;
         const idVacina = Number(id);
 

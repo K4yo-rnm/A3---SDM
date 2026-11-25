@@ -1,8 +1,17 @@
 import { NextResponse, NextRequest } from "next/server";
 import { tutorService } from "@/service/tutor_services";
+import { obterVeterinarioAutenticado } from "@/lib/auth";
 
 export async function GET() {
-        try {
+    try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const tutores = await tutorService.consultarTodos();
 
         return NextResponse.json(
@@ -26,6 +35,14 @@ export async function GET() {
 //POST Cadastrar Tutor
 export async function POST(request: NextRequest) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         //Recebe os dados
         const dados = await request.json();
 

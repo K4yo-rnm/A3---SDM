@@ -1,10 +1,19 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { vacinaService } from "@/service/vacina_services";
+import { obterVeterinarioAutenticado } from "@/lib/auth";
 
 // GET - Listar todas as vacinas
 export async function GET() {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const vacinas = await vacinaService.listarTodas();
 
         return NextResponse.json(
@@ -27,6 +36,14 @@ export async function GET() {
 // POST - Cadastrar aplicação de vacina
 export async function POST(request: NextRequest) {
     try {
+        const veterinario = await obterVeterinarioAutenticado();
+
+        if (!veterinario) {
+            return NextResponse.json(
+                { mensagem: "Acesso não autorizado. Faça login." },
+                { status: 401 }
+            );
+        }
         const dados = await request.json();
 
         if (!dados.data_aplicacao) {
