@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
         const consulta = await consultaService.cadastrarConsulta({
             ...dados,
             id_animal: dados.id_animal,
-            id_veterinario: Number(dados.id_veterinario),
+            id_veterinario: veterinario.id_veterinario,
             data_hora: dataHora
         });
 

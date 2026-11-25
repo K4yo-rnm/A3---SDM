@@ -14,8 +14,14 @@ export async function POST(request: NextRequest) {
             veterinario.id_veterinario
         );
 
-        const linkConfirmacao = 
-            `${request.nextUrl.origin}/api/auth/confirmar?token=${tokenConfirmacao}`;
+        const urlBase = process.env.APP_URL;
+
+        if (!urlBase) {
+            throw new Error("A variável APP_URL não está configurada.");
+        }
+
+        const linkConfirmacao =
+            `${urlBase.replace(/\/$/, "")}/api/auth/confirmar?token=${tokenConfirmacao}`;
 
         // Remove o hash da senha antes de retornar a resposta
         const veterinarioSeguro = Object.fromEntries(

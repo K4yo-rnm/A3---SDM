@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
         const resultado = await vacinaService.cadastrarVacina({
             ...dados,
-            id_veterinario: Number(dados.id_veterinario),
+            id_veterinario: veterinario.id_veterinario,
             data_aplicacao: dataAplicacao,
             proxima_dose: proximaDose,
             validade_lote: validadeLote
