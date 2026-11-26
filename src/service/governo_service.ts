@@ -5,6 +5,10 @@ const API_GOVERNAMENTAL_URL =
 const MENSAGEM_API_INDISPONIVEL =
     "API Governo fora de serviço.";
 
+export type RespostaGoverno = {
+    protocolo: string;
+};
+
 function obterDetalhe(resultado: unknown): string | null {
     if (
         typeof resultado === "object" &&
@@ -25,10 +29,10 @@ function obterDetalhe(resultado: unknown): string | null {
     return null;
 }
 
-async function requisicaoGoverno(
+async function requisicaoGoverno<T>(
     url: string,
     opcoes: RequestInit
-): Promise<unknown> {
+): Promise<T> {
     let resposta: Response;
 
     try {
@@ -84,7 +88,7 @@ async function requisicaoGoverno(
         );
     }
 
-    return resultado;
+    return resultado as T;
 }
 
 function obterUrlGoverno(): string {
@@ -109,7 +113,7 @@ export async function enviarVacinacaoAntirrabica(
         identificacao_veterinario: string;
     }
 ) {
-    return await requisicaoGoverno(
+    return await requisicaoGoverno<RespostaGoverno>(
         `${obterUrlGoverno()}/api/governo/vacinacoes-antirrabicas`,
         {
             method: "POST",
@@ -132,7 +136,7 @@ export async function cadastrarAnimalGoverno(dados: {
     especie: string;
     raca?: string | null;
 }) {
-    return await requisicaoGoverno(
+    return await requisicaoGoverno<RespostaGoverno>(
         `${obterUrlGoverno()}/api/governo/animais`,
         {
             method: "POST",
@@ -157,7 +161,7 @@ export async function atualizarAnimalGoverno(
         raca?: string | null;
     }
 ) {
-    return await requisicaoGoverno(
+    return await requisicaoGoverno<RespostaGoverno>(
         `${obterUrlGoverno()}/api/governo/animais/${encodeURIComponent(microchip)}`,
         {
             method: "PUT",
