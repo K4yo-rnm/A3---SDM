@@ -21,7 +21,6 @@ export default function EditarAnimal({ animal, onClose, onAtualizado }: Props) {
     const [especie, setEspecie] = useState(String(animal.id_especie));
     const [raca, setRaca] = useState(animal.id_raca ? String(animal.id_raca) : "");
     const [nascimento, setNascimento] = useState(animal.data_nascimento ? new Date(animal.data_nascimento).toISOString().slice(0, 10) : "");
-    const [idade, setIdade] = useState(animal.idade_estimada?.toString() || "");
     const [sexo, setSexo] = useState(animal.sexo || "");
     const [cor, setCor] = useState(animal.cor || "");
     const [peso, setPeso] = useState(animal.peso_atual?.toString() || "");
@@ -92,7 +91,6 @@ export default function EditarAnimal({ animal, onClose, onAtualizado }: Props) {
             const dados = {
                 nome: nome.trim(),
                 data_nascimento: nascimento ? new Date(`${nascimento}T12:00:00`).toISOString() : null,
-                idade_estimada: idade ? Number(idade) : null,
                 sexo: sexo || null,
                 cor: cor.trim() || null,
                 peso_atual: peso ? Number(peso) : null,
@@ -223,9 +221,6 @@ export default function EditarAnimal({ animal, onClose, onAtualizado }: Props) {
                         </label>
                         <label className="text-sm text-[#343A40]">Data de nascimento
                             <input type="date" value={nascimento} onChange={e => setNascimento(e.target.value)} className={campo} />
-                        </label>
-                        <label className="text-sm text-[#343A40]">Idade estimada (anos)
-                            <input type="number" min="0" step="1" value={idade} onChange={e => setIdade(e.target.value)} className={campo} />
                         </label>
                         <label className="text-sm text-[#343A40]">Sexo
                             <select value={sexo} onChange={e => setSexo(e.target.value)} className={campo}>

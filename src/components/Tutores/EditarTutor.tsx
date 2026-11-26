@@ -42,6 +42,7 @@ export default function EditarTutor({
     const [cep, setCep] = useState(enderecoAtual?.cep || "");
     const [buscandoCep, setBuscandoCep] = useState(false);
     const [salvando, setSalvando] = useState(false);
+    const [cepValidado, setCepValidado] = useState("");
     const [erro, setErro] = useState("");
 
     const [endereco, setEndereco] = useState({
@@ -54,8 +55,11 @@ export default function EditarTutor({
         id_ibge_municipio: enderecoAtual?.id_ibge_municipio || "",
     });
 
+
     async function buscarCep() {
         const cepLimpo = cep.replace(/\D/g, "");
+
+        setCepValidado("");
 
         if (cepLimpo.length !== 8) {
             setErro("Informe um CEP válido com 8 números.");
@@ -72,6 +76,7 @@ export default function EditarTutor({
             });
 
             const dados = await resposta.json();
+
             console.log("Resposta da API CEP:", dados);
 
             if (!resposta.ok) {
@@ -80,6 +85,10 @@ export default function EditarTutor({
                     dados.erro ||
                     "Não foi possível consultar o CEP."
                 );
+            }
+
+            if (dados.erro || !dados.endereco) {
+                throw new Error("CEP inválido.");
             }
 
             const dadosEndereco = dados.endereco;
@@ -93,7 +102,10 @@ export default function EditarTutor({
                 id_ibge_municipio: dadosEndereco.codigo_ibge || "",
             }));
 
+            setCepValidado(cepLimpo);
+
         } catch (erro) {
+            setCepValidado("");
             setErro(
                 erro instanceof Error
                     ? erro.message
@@ -104,13 +116,21 @@ export default function EditarTutor({
         }
     }
 
+
     async function atualizarTutor(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-
-        setSalvando(true);
         setErro("");
 
+        const cepLimpo = cep.replace(/\D/g, "");
+
+        if (cepLimpo.length !== 8 || cepValidado !== cepLimpo) {
+            setErro("CEP inválido. Consulte um CEP válido antes de salvar.");
+            return;
+        }
+
         const formulario = new FormData(event.currentTarget);
+
+        setSalvando(true);
 
         const payload = {
             nome_completo: String(
@@ -133,15 +153,14 @@ export default function EditarTutor({
             ).trim() || null,
 
             enderecos: [{
-                cep: cep.replace(/\D/g, ""),
+                cep: cepLimpo,
                 logradouro: endereco.logradouro.trim(),
                 numero: endereco.numero.trim(),
                 complemento: endereco.complemento.trim() || null,
                 bairro: endereco.bairro.trim(),
                 cidade: endereco.cidade.trim(),
                 uf: endereco.uf.trim().toUpperCase(),
-                id_ibge_municipio:
-                    endereco.id_ibge_municipio || null,
+                id_ibge_municipio: endereco.id_ibge_municipio || null,
             }],
         };
 
@@ -313,7 +332,7 @@ export default function EditarTutor({
                                         buscarCep();
                                     }
                                 }}
-                                maxLength={9}
+                                maxLength={8}
                                 required
                                 className="min-w-0 flex-1 rounded-lg border border-[#E7E5DF] px-3 py-2 text-sm outline-none focus:border-[#718879]"
                             />

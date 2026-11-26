@@ -11,6 +11,7 @@ export default function NovoTutor({ onClose }: NovoTutorProps) {
     const [cep, setCep] = useState("");
     const [buscandoCep, setBuscandoCep] = useState(false);
     const [erroCep, setErroCep] = useState("");
+    const [cepValidado, setCepValidado] = useState("");
     const [salvando, setSalvando] = useState(false);
     const [erroCadastro, setErroCadastro] = useState("");
 
@@ -27,9 +28,10 @@ export default function NovoTutor({ onClose }: NovoTutorProps) {
         const cepLimpo = cep.replace(/\D/g, "");
 
         setErroCep("");
+        setCepValidado("");
 
         if (cepLimpo.length !== 8) {
-            setErroCep("Digite um CEP válido com 8 dígitos.");
+            setErroCep("CEP inválido");
             return;
         }
 
@@ -43,8 +45,8 @@ export default function NovoTutor({ onClose }: NovoTutorProps) {
 
             const dados = await resposta.json();
 
-            if (!resposta.ok) {
-                throw new Error(dados.erro || "Não foi possível consultar o CEP.");
+            if (!resposta.ok || dados.erro || !dados.endereco) {
+                throw new Error("CEP inválido");
             }
 
             setEndereco({
@@ -55,11 +57,14 @@ export default function NovoTutor({ onClose }: NovoTutorProps) {
                 uf: dados.endereco.uf || "",
                 id_ibge_municipio: dados.endereco.codigo_ibge || "",
             });
+
+            setCepValidado(cepLimpo);
+
         } catch (erro) {
             setErroCep(
-                erro instanceof Error
-                    ? erro.message
-                    : "Erro ao consultar o CEP."
+                erro instanceof Error && erro.message === "CEP inválido"
+                    ? "CEP inválido"
+                    : "Erro ao consultar o CEP. Tente novamente."
             );
         } finally {
             setBuscandoCep(false);
@@ -68,6 +73,12 @@ export default function NovoTutor({ onClose }: NovoTutorProps) {
 
     async function cadastrarTutor(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+        const cepLimpo = cep.replace(/\D/g, "");
+
+        if (cepLimpo.length !== 8 || cepValidado !== cepLimpo) {
+            setErroCep("CEP inválido");
+            return;
+        }
 
         setErroCadastro("");
         setSalvando(true);
@@ -233,7 +244,11 @@ export default function NovoTutor({ onClose }: NovoTutorProps) {
                                     maxLength={9}
                                     placeholder="00000-000"
                                     value={cep}
-                                    onChange={(e) => setCep(e.target.value)}
+                                    onChange={(e) => {
+                                        setCep(e.target.value);
+                                        setCepValidado("");
+                                        setErroCep("");
+                                    }}
                                     onBlur={() => {
                                         if (cep.replace(/\D/g, "").length === 8) {
                                             buscarCep();

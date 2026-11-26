@@ -134,7 +134,6 @@ export default function NovoAnimal({ onClose, onCadastrado }: Props) {
 
         const form = new FormData(event.currentTarget);
         const data = String(form.get("data_nascimento") || "");
-        const idade = String(form.get("idade_estimada") || "");
         const codigo = String(form.get("microchip") || "").trim();
 
         try {
@@ -145,7 +144,6 @@ export default function NovoAnimal({ onClose, onCadastrado }: Props) {
                 body: JSON.stringify({
                     nome: String(form.get("nome")).trim(),
                     data_nascimento: data ? new Date(`${data}T12:00:00`).toISOString() : null,
-                    idade_estimada: idade ? Number(idade) : null,
                     sexo: form.get("sexo") || null,
                     cor: String(form.get("cor") || "").trim() || null,
                     peso_atual: form.get("peso") ? Number(form.get("peso")) : null,
@@ -164,7 +162,11 @@ export default function NovoAnimal({ onClose, onCadastrado }: Props) {
                     method: "POST",
                     credentials: "include",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ codigo_microchip: codigo, id_veterinario: veterinarioId })
+                    body: JSON.stringify({
+                        codigo_microchip: codigo,
+                        id_tutor: Number(form.get("tutor")),
+                        id_veterinario: veterinarioId
+                    })    
                 });
                 const resultado = await microchip.json();
                 if (!microchip.ok) {
@@ -302,10 +304,6 @@ export default function NovoAnimal({ onClose, onCadastrado }: Props) {
 
                     <label className="text-sm text-[#343A40]">Data de nascimento
                         <input name="data_nascimento" type="date" className={campo} />
-                    </label>
-
-                    <label className="text-sm text-[#343A40]">Idade estimada (anos)
-                        <input name="idade_estimada" type="number" min="0" step="1" className={campo} />
                     </label>
 
                     <label className="text-sm text-[#343A40]">Sexo

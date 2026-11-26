@@ -44,6 +44,7 @@ export async function POST(
         const vinculo = await vinculoMicrochipService.vincularMicrochip({
             id_animal: id,
             codigo_microchip: codigoMicrochip.trim(),
+            id_tutor: Number(dados.id_tutor),
             id_veterinario: veterinario.id_veterinario
         });
 

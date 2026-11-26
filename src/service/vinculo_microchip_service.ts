@@ -40,6 +40,7 @@ export class VinculoMicrochipService {
     async vincularMicrochip(dados: {
         id_animal: string;
         codigo_microchip: string;
+        id_tutor: number;
         id_veterinario: number;
         observacoes?: string | null;
     }) {
@@ -57,10 +58,18 @@ export class VinculoMicrochipService {
             throw new Error("Veterinário inválido.");
         }
 
+        if (!Number.isInteger(dados.id_tutor) || dados.id_tutor <= 0) {
+            throw new Error("Tutor inválido.");
+        }
+
         const animal = await this.validarResponsaveis(
             dados.id_animal,
             dados.id_veterinario
         );
+
+        if (animal.id_tutor !== dados.id_tutor) {
+            throw new Error("O tutor informado não pertence a este animal.");
+        }
 
         // Verificar se o código já existe
         const microchipExistente =
